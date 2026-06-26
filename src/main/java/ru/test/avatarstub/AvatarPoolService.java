@@ -56,7 +56,7 @@ public class AvatarPoolService {
         }
 
         long current = requestCounter.getAndIncrement();
-        int index = (int) (current % currentPool.size());
+        int index = Math.floorMod(current, currentPool.size());
 
         return currentPool.get(index);
     }
@@ -65,8 +65,14 @@ public class AvatarPoolService {
         return avatars.size();
     }
 
-    public long currentIndex() {
-        return requestCounter.get();
+    public long nextIndex() {
+        List<Path> currentPool = avatars;
+
+        if (currentPool.isEmpty()) {
+            return 0;
+        }
+
+        return Math.floorMod(requestCounter.get(), currentPool.size());
     }
 
     public Path avatarDir() {

@@ -13,7 +13,6 @@ public class AvatarProperties {
     private int width = 550;
     private int height = 550;
     private int targetSizeKb = 40;
-    private int adminPrepareMaxCount = 10000;
 
     public String getMode() {
         return mode;
@@ -63,11 +62,4 @@ public class AvatarProperties {
         this.targetSizeKb = targetSizeKb;
     }
 
-    public int getAdminPrepareMaxCount() {
-        return adminPrepareMaxCount;
-    }
-
-    public void setAdminPrepareMaxCount(int adminPrepareMaxCount) {
-        this.adminPrepareMaxCount = adminPrepareMaxCount;
-    }
 }

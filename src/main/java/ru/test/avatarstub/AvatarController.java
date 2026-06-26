@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -21,38 +20,9 @@ import java.util.Map;
 public class AvatarController {
 
     private final AvatarPoolService avatarPoolService;
-    private final AvatarGeneratorService avatarGeneratorService;
-    private final AvatarProperties properties;
 
-    public AvatarController(
-            AvatarPoolService avatarPoolService,
-            AvatarGeneratorService avatarGeneratorService,
-            AvatarProperties properties
-    ) {
+    public AvatarController(AvatarPoolService avatarPoolService) {
         this.avatarPoolService = avatarPoolService;
-        this.avatarGeneratorService = avatarGeneratorService;
-        this.properties = properties;
-    }
-
-    @PostMapping("/admin/prepare")
-    public ResponseEntity<Map<String, Object>> prepare(@RequestParam(defaultValue = "1000") int count) {
-        if (count > properties.getAdminPrepareMaxCount()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "REJECTED",
-                    "message", "HTTP generation is limited. Use command mode for large pools.",
-                    "requestedCount", count,
-                    "maxAllowedCount", properties.getAdminPrepareMaxCount()
-            ));
-        }
-
-        avatarGeneratorService.generatePool(count);
-        avatarPoolService.reloadPool();
-
-        return ResponseEntity.ok(Map.of(
-                "status", "DONE",
-                "poolSize", avatarPoolService.size(),
-                "dir", avatarPoolService.avatarDir().toAbsolutePath().toString()
-        ));
     }
 
     @PostMapping("/admin/reload")
@@ -67,11 +37,30 @@ public class AvatarController {
     }
 
     @GetMapping("/admin/status")
-    public ResponseEntity<Map<String, Object>> status() {
-        return ResponseEntity.ok(Map.of(
-                "poolSize", avatarPoolService.size(),
-                "currentIndex", avatarPoolService.currentIndex(),
-                "dir", avatarPoolService.avatarDir().toAbsolutePath().toString()
+    public ResponseEntity<StatusResponse> status() {
+        return ResponseEntity.ok(new StatusResponse(
+                avatarPoolService.size(),
+                avatarPoolService.nextIndex()
+        ));
+    }
+
+    @RequestMapping(
+            value = "/admin/**",
+            method = {
+                    RequestMethod.GET,
+                    RequestMethod.POST,
+                    RequestMethod.PUT,
+                    RequestMethod.PATCH,
+                    RequestMethod.DELETE,
+                    RequestMethod.OPTIONS,
+                    RequestMethod.HEAD,
+                    RequestMethod.TRACE
+            }
+    )
+    public ResponseEntity<Map<String, Object>> unknownAdminRequest(HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                "status", "NOT_FOUND",
+                "path", request.getRequestURI()
         ));
     }
 
@@ -84,7 +73,8 @@ public class AvatarController {
                     RequestMethod.PATCH,
                     RequestMethod.DELETE,
                     RequestMethod.OPTIONS,
-                    RequestMethod.HEAD
+                    RequestMethod.HEAD,
+                    RequestMethod.TRACE
             }
     )
     public ResponseEntity<?> anyRestRequest(HttpServletRequest request) throws IOException {
@@ -104,5 +94,8 @@ public class AvatarController {
                     .contentType(MediaType.TEXT_PLAIN)
                     .body("Avatar pool is empty. Run generation first. Requested URI: " + request.getRequestURI());
         }
+    }
+
+    private record StatusResponse(int poolSize, long nextIndex) {
     }
 }
